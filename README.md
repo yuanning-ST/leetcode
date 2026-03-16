@@ -258,3 +258,428 @@ class Solution:
             R *= nums[i]
         
         return answer
+```
+## 回溯
+
+### 全排列
+![alt text](./pic/全排列.png)
+```
+class Solution:
+    def permute(self, nums: List[int]) -> List[List[int]]:
+        """
+        全排列（回溯法）
+        核心思想：遍历所有数字，每层选一个新数字，用标记数组记录哪些数字已被使用，递归构建排列
+        """
+        # 初始化结果列表
+        self.ans = []
+        # 当前正在构建的排列
+        self.path = []
+        # 标记数组，记录每个位置的数字是否已被使用
+        self.used = [False] * len(nums)
+
+        # 定义回溯函数
+        def backtrack():
+            # 如果当前路径长度等于数组长度，说明找到了一个完整排列
+            if len(self.path) == len(nums):
+                # 将当前路径的副本加入结果（因为后续会修改）
+                self.ans.append(self.path[:])
+                return
+
+            # 遍历所有数字
+            for i in range(len(nums)):
+                # 如果当前数字已被使用，跳过
+                if self.used[i]:
+                    continue
+
+                # 做选择：将 nums[i] 加入路径，并标记为已使用
+                self.used[i] = True
+                self.path.append(nums[i])
+
+                # 递归进入下一层
+                backtrack()
+
+                # 撤销选择：回溯，恢复状态
+                self.path.pop()
+                self.used[i] = False
+
+        # 启动回溯
+        backtrack()
+        return self.ans
+```
+
+### 子集
+![alt text](./pic/子集.png)
+```
+class Solution:
+    def subsets(self, nums: List[int]) -> List[List[int]]:
+        """
+        求数组的所有子集（回溯法）
+        核心思想：每个元素都有选或不选两种可能，通过回溯枚举所有组合
+        """
+        # 初始化结果列表和当前路径
+        self.ans = []
+        self.path = []
+        
+        def dfs(start: int):
+            """
+            深度优先搜索
+            start: 当前可以选择的起始索引（保证不重复，且顺序递增）
+            """
+            # 1. 将当前路径加入结果（注意要复制，避免后续修改影响）
+            self.ans.append(self.path[:])
+            
+            # 2. 递归终止条件：如果已经遍历到数组末尾，直接返回
+            #    其实这里也可以不写，因为for循环会自动结束
+            if start == len(nums):
+                return
+            
+            # 3. 从start开始遍历，依次尝试将每个元素加入路径
+            for i in range(start, len(nums)):
+                # 做选择：将nums[i]加入路径
+                self.path.append(nums[i])
+                
+                # 递归：下一层从i+1开始，避免重复使用同一个元素
+                dfs(i + 1)
+                
+                # 撤销选择：回溯，恢复状态
+                self.path.pop()
+        
+        # 从索引0开始搜索
+        dfs(0)
+        return self.ans
+
+```
+
+### 电话号码的字母组合
+![alt text](./pic/电话号码的字母组合.png)
+```
+class Solution:
+    def __init__(self):
+        # 初始化结果列表和当前路径字符串
+        self.ans = []
+        self.path = []
+        # 数字到字母的映射表
+        self.phone = {
+            '2': "abc",
+            '3': "def",
+            '4': "ghi",
+            '5': "jkl",
+            '6': "mno",
+            '7': "pqrs",
+            '8': "tuv",
+            '9': "wxyz"
+        }
+    
+    def letterCombinations(self, digits: str) -> List[str]:
+        """
+        电话号码的字母组合（回溯法）
+        核心思想：每个数字对应一组字母，通过回溯枚举所有可能的组合
+        """
+        # 边界情况：空输入返回空列表
+        if not digits:
+            return []
+        
+        # 清空成员变量（防止多次调用时残留）
+        self.ans = []
+        self.path = []
+        
+        # 开始回溯
+        self.backtrack(digits, 0)
+        return self.ans
+    
+    def backtrack(self, digits: str, index: int):
+        """
+        回溯函数
+        digits: 输入的数字字符串
+        index: 当前处理的数字位置
+        """
+        # 如果已经处理完所有数字，将当前路径加入结果
+        if index == len(digits):
+            self.ans.append(''.join(self.path))
+            return
+        
+        # 获取当前数字对应的字母串
+        letters = self.phone[digits[index]]
+        
+        # 遍历当前数字的每个字母
+        for ch in letters:
+            # 做选择：将当前字母加入路径
+            self.path.append(ch)
+            # 递归处理下一个数字
+            self.backtrack(digits, index + 1)
+            # 撤销选择：回溯
+            self.path.pop()
+```
+
+### 组合总和
+![alt text](./pic/组合总和.png)
+```
+from typing import List
+
+class Solution:
+    def combinationSum(self, candidates: List[int], target: int) -> List[List[int]]:
+        """
+        组合总和（可重复使用同一元素）
+        核心思想：回溯法，每次从当前索引开始尝试，避免重复组合
+        """
+        # 初始化结果列表、当前路径和当前和
+        self.ans = []          # 存放所有有效组合
+        self.path = []         # 当前正在构建的组合
+        self.current_sum = 0   # 当前路径的和
+        
+        # 开始回溯，从索引0开始
+        self.backtrack(candidates, target, 0)
+        return self.ans
+    
+    def backtrack(self, candidates: List[int], target: int, start: int) -> None:
+        """
+        回溯函数
+        candidates: 候选数组
+        target: 目标和
+        start: 当前可选的起始索引（保证组合递增，避免重复）
+        """
+        # 剪枝：如果当前和已经超过目标，直接返回
+        if self.current_sum > target:
+            return
+        
+        # 找到一个有效组合，加入结果
+        if self.current_sum == target:
+            # 注意：需要加入当前路径的副本，因为后续会修改
+            self.ans.append(self.path[:])
+            # 注意：这里没有立即返回，因为后续尝试都会使和变大，但下一层递归会因 >target 而返回
+            # 为了效率，也可以在这里加上 return，但原代码没有，我们保留原样
+        
+        # 从 start 开始遍历，保证每个元素只考虑一次（但可以重复使用，因为下一层仍从当前索引开始）
+        for i in range(start, len(candidates)):
+            # 做选择：将 candidates[i] 加入路径，并累加和
+            self.path.append(candidates[i])
+            self.current_sum += candidates[i]
+            
+            # 递归：因为可以重复使用同一元素，下一层仍从 i 开始
+            self.backtrack(candidates, target, i)
+            
+            # 撤销选择：回溯，恢复状态
+            self.path.pop()
+            self.current_sum -= candidates[i]
+
+```
+
+### 括号生成
+![alt text](./pic/括号生成.png)
+```
+class Solution:
+    def generateParenthesis(self, n: int) -> List[str]:
+        """
+        生成所有有效的括号组合（暴力递归法）
+        核心思想：递归生成所有可能的 2^(2n) 种括号序列，然后逐一验证有效性
+        """
+        # 初始化结果列表和当前路径字符串
+        self.ans = []
+        self.path = []
+        
+        def backtrack():
+            """回溯生成所有可能的括号序列"""
+            # 如果当前路径长度达到 2n，检查是否有效
+            if len(self.path) == 2 * n:
+                if is_valid(self.path):
+                    self.ans.append(''.join(self.path))
+                return
+            
+            # 尝试添加左括号
+            self.path.append('(')
+            backtrack()
+            self.path.pop()
+            
+            # 尝试添加右括号
+            self.path.append(')')
+            backtrack()
+            self.path.pop()
+        
+        def is_valid(s: List[str]) -> bool:
+            """验证括号序列是否有效"""
+            balance = 0
+            for ch in s:
+                if ch == '(':
+                    balance += 1
+                else:  # ch == ')'
+                    balance -= 1
+                if balance < 0:  # 右括号多于左括号，提前失效
+                    return False
+            return balance == 0  # 最后左右括号数相等
+        
+        backtrack()
+        return self.ans
+```
+
+### 单词搜索
+![alt text](./pic/单词搜索.png)
+```
+class Solution:
+    def exist(self, board: List[List[str]], word: str) -> bool:
+        """
+        判断单词是否存在于二维网格中
+        核心思想：回溯 + 剪枝，从每个格子出发深度优先搜索
+        """
+        # 获取网格的行数和列数
+        rows, cols = len(board), len(board[0])
+        # 创建访问标记矩阵，初始全为 False
+        visited = [[False] * cols for _ in range(rows)]
+        
+        # 定义四个方向：右、左、下、上
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        
+        def backtrack(i: int, j: int, k: int) -> bool:
+            """
+            从 board[i][j] 开始匹配 word 的第 k 个字符
+            返回是否找到一条完整路径
+            """
+            # 如果当前字符不匹配，直接返回 False
+            if board[i][j] != word[k]:
+                return False
+            
+            # 如果已经匹配到最后一个字符，说明找到完整单词
+            if k == len(word) - 1:
+                return True
+            
+            # 标记当前格子已访问
+            visited[i][j] = True
+            
+            # 尝试四个方向
+            for di, dj in directions:
+                new_i, new_j = i + di, j + dj
+                # 检查新坐标是否在网格范围内
+                if 0 <= new_i < rows and 0 <= new_j < cols:
+                    # 如果新格子未被访问，则递归探索
+                    if not visited[new_i][new_j]:
+                        if backtrack(new_i, new_j, k + 1):
+                            return True
+            
+            # 回溯：撤销访问标记
+            visited[i][j] = False
+            return False
+        
+        # 遍历每个格子作为起点
+        for i in range(rows):
+            for j in range(cols):
+                if backtrack(i, j, 0):
+                    return True
+        return False
+```
+
+### 分割回文串
+![alt text](./pic/分割回文串.png)
+```
+class Solution:
+    def partition(self, s: str) -> List[List[str]]:
+        """
+        分割回文串
+        核心思想：回溯法，从起始位置开始，尝试所有可能的子串，
+                如果是回文，则加入当前分割，并递归处理剩余部分
+        """
+        # 初始化结果列表和当前分割路径
+        self.ans = []      # 存放所有有效分割方案
+        self.path = []     # 存放当前正在构建的分割
+        
+        def is_palindrome(sub: str) -> bool:
+            """判断子串是否为回文串"""
+            left, right = 0, len(sub) - 1
+            while left < right:
+                if sub[left] != sub[right]:
+                    return False
+                left += 1
+                right -= 1
+            return True
+        
+        def backtrack(start: int):
+            """
+            回溯函数
+            start: 当前开始分割的起始索引
+            """
+            # 如果已经处理完整个字符串，将当前路径加入结果
+            if start == len(s):
+                self.ans.append(self.path[:])  # 注意要复制
+                return
+            
+            # 从 start 开始，尝试所有可能的结束位置
+            for end in range(start, len(s)):
+                # 获取当前子串 [start, end]
+                substr = s[start:end+1]
+                
+                # 如果当前子串不是回文，跳过
+                if not is_palindrome(substr):
+                    continue
+                
+                # 做选择：将当前回文子串加入路径
+                self.path.append(substr)
+                
+                # 递归处理剩余部分（从 end+1 开始）
+                backtrack(end + 1)
+                
+                # 撤销选择：回溯
+                self.path.pop()
+        
+        # 从索引0开始回溯
+        backtrack(0)
+        return self.ans
+```
+
+### N皇后
+![alt text](./pic/N皇后.png)
+```
+class Solution:
+    def solveNQueens(self, n: int) -> List[List[str]]:
+        """
+        N 皇后问题
+        核心思想：回溯法，逐行放置皇后，每行尝试所有列，
+                检查当前位置是否与已放置的皇后冲突（同列、对角线）
+        """
+        # 初始化结果列表和当前路径
+        self.ans = []          # 存放所有有效棋盘
+        self.path = []         # 当前正在构建的棋盘，每个元素是一个字符串（一行）
+        
+        def is_safe(col: int) -> bool:
+            """
+            检查在当前行（即 path 的长度）的 col 列放置皇后是否安全
+            需要检查：1. 同一列是否有皇后
+                     2. 左上对角线是否有皇后
+                     3. 右上对角线是否有皇后
+            """
+            current_row = len(self.path)  # 当前要放置的行
+            for row in range(current_row):
+                # 检查同一列
+                if self.path[row][col] == 'Q':
+                    return False
+                # 检查左上对角线：列差 = 行差
+                if col - (current_row - row) >= 0 and self.path[row][col - (current_row - row)] == 'Q':
+                    return False
+                # 检查右上对角线：列差 = 行差
+                if col + (current_row - row) < n and self.path[row][col + (current_row - row)] == 'Q':
+                    return False
+            return True
+        
+        def backtrack():
+            """回溯函数：逐行放置皇后"""
+            # 如果已经放满 n 行，说明找到一个有效解
+            if len(self.path) == n:
+                self.ans.append(self.path[:])  # 注意复制
+                return
+            
+            # 生成当前行的初始字符串，全是 '.'
+            row_str = ['.'] * n
+            # 尝试当前行的每一列
+            for col in range(n):
+                if is_safe(col):
+                    # 做选择：放置皇后
+                    row_str[col] = 'Q'
+                    self.path.append(''.join(row_str))
+                    
+                    # 递归进入下一行
+                    backtrack()
+                    
+                    # 撤销选择：回溯
+                    self.path.pop()
+                    row_str[col] = '.'  # 恢复当前行的字符
+        
+        backtrack()
+        return self.ans
+```
