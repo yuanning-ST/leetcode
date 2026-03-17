@@ -683,3 +683,784 @@ class Solution:
         backtrack()
         return self.ans
 ```
+
+## 二分查找
+### 搜索插入位置
+```
+class Solution:
+    def searchInsert(self, nums: List[int], target: int) -> int:
+        """
+        搜索插入位置
+        给定一个排序数组和一个目标值，在数组中找到目标值，并返回其索引。
+        如果目标值不存在于数组中，返回它将会被按顺序插入的位置。
+        要求：时间复杂度 O(log n)
+        """
+        # 初始化左右指针
+        left, right = 0, len(nums) - 1
+        
+        # 二分查找循环，当 left > right 时退出
+        while left <= right:
+            # 计算中间位置，避免整数溢出的写法（Python不需要，但保持习惯）
+            mid = left + (right - left) // 2
+            
+            if nums[mid] < target:
+                # 目标值在右半部分，移动左指针
+                left = mid + 1
+            elif nums[mid] > target:
+                # 目标值在左半部分，移动右指针
+                right = mid - 1
+            else:
+                # 找到目标值，直接返回索引
+                return mid
+        
+        # 循环结束时，left 指向第一个大于 target 的位置，即插入位置 假设重合了，right继续减1，left不动
+        return left
+```
+
+### 搜索二维矩阵
+
+```
+class Solution:
+    def searchMatrix(self, matrix: List[List[int]], target: int) -> bool:
+        """
+        搜索二维矩阵
+        矩阵特性：每行从左到右递增，每行的第一个元素大于上一行的最后一个元素（整体有序）
+        核心思想：两次二分查找
+                 1. 在第一列中二分查找，找到最后一个小于等于 target 的行
+                 2. 在该行中二分查找 target
+        """
+        m, n = len(matrix), len(matrix[0])
+        
+        # === 第一步：在第一列中二分查找，确定可能所在的行 ===
+        l_row, r_row = 0, m - 1
+        while l_row <= r_row:
+            mid_row = (l_row + r_row) // 2
+            if matrix[mid_row][0] == target:
+                return True
+            elif matrix[mid_row][0] < target:
+                l_row = mid_row + 1
+            else:
+                r_row = mid_row - 1
+        
+        # 循环结束时，r_row 指向最后一个小于 target 的行
+        # 如果 r_row < 0，说明 target 小于所有行的第一个元素，不存在
+        target_row = r_row
+        if target_row < 0:
+            return False
+        
+        # === 第二步：在确定的行中进行二分查找 ===
+        l_col, r_col = 0, n - 1
+        while l_col <= r_col:
+            mid_col = (l_col + r_col) // 2
+            if matrix[target_row][mid_col] == target:
+                return True
+            elif matrix[target_row][mid_col] < target:
+                l_col = mid_col + 1
+            else:
+                r_col = mid_col - 1
+        
+        return False
+```
+
+### 在排序数组中查找第一个和最后一个位置
+```
+class Solution:
+    def __init__(self):
+        # 初始化最小索引和最大索引
+        self.min_index = float('inf')
+        self.max_index = -1
+    
+    def searchRange(self, nums: List[int], target: int) -> List[int]:
+        """
+        在排序数组中查找元素的第一个和最后一个位置
+        核心思想：二分查找 + 递归扩展边界
+        """
+        # 处理空数组
+        if not nums:
+            return [-1, -1]
+        
+        # 开始递归查找
+        self.binary_search(nums, 0, len(nums) - 1, target)
+        
+        # 如果找到了目标，返回最小和最大索引；否则返回[-1, -1]
+        if self.max_index >= 0:
+            return [self.min_index, self.max_index]
+        return [-1, -1]
+    
+    def binary_search(self, nums: List[int], left: int, right: int, target: int) -> None:
+        """
+        二分查找并递归扩展边界
+        """
+        # 递归终止条件
+        if left > right:
+            return
+        
+        # 二分查找
+        mid = (left + right) // 2
+        if nums[mid] == target:
+            # 更新边界
+            self.min_index = min(self.min_index, mid)
+            self.max_index = max(self.max_index, mid)
+            
+            # 关键：在左右两侧继续查找，因为可能还有相同的目标值
+            # 在左半部分继续查找（可能还有更左边的目标）
+            self.binary_search(nums, left, mid - 1, target)
+            # 在右半部分继续查找（可能还有更右边的目标）
+            self.binary_search(nums, mid + 1, right, target)
+        elif nums[mid] < target:
+            # 目标在右半部分
+            self.binary_search(nums, mid + 1, right, target)
+        else:
+            # 目标在左半部分
+            self.binary_search(nums, left, mid - 1, target)
+```
+
+### 搜索旋转排序数组
+
+```
+class Solution:
+    def search(self, nums: List[int], target: int) -> int:
+        """
+        搜索旋转排序数组
+        数组原本是升序的，但在某个点进行了旋转，例如 [4,5,6,7,0,1,2]
+        要求：时间复杂度 O(log n)
+        核心思想：二分查找，通过比较 nums[mid] 与 nums[left] 的关系，
+                判断左半部分还是右半部分是有序的，然后决定搜索方向
+                最终总会收敛到一个有序的区间
+        """
+        left, right = 0, len(nums) - 1
+        
+        while left <= right:
+            mid = (left + right) // 2
+            
+            # 找到目标，直接返回
+            if nums[mid] == target:
+                return mid
+            
+            # 判断左半部分是否有序（即 nums[left] <= nums[mid]）
+            # 确定target位置
+            if nums[left] <= nums[mid]:
+                # 左半部分有序
+                # 如果 target 在左半部分的范围内，则收缩右边界
+                if nums[left] <= target < nums[mid]:
+                    right = mid - 1
+                else: # target很大或者很小都在右侧
+                    # 否则 target 在右半部分，收缩左边界
+                    left = mid + 1
+            else:
+                # 右半部分有序（因为左半部分无序，右半部分必然有序）
+                # 如果 target 在右半部分的范围内，则收缩左边界
+                if nums[mid] < target <= nums[right]:
+                    left = mid + 1
+                else:
+                    # 否则 target 在左半部分，收缩右边界
+                    right = mid - 1
+        
+        # 没找到
+        return -1
+```
+### 搜索旋转排序数组最小值
+```
+class Solution:
+    def findMin(self, nums: List[int]) -> int:
+        """
+        寻找旋转排序数组中的最小值
+        数组原本是升序的，但在某个点进行了旋转，例如 [4,5,6,7,0,1,2]
+        要求：时间复杂度 O(log n)
+        核心思想：二分查找，通过比较 nums[mid] 与 nums[right] 的关系，
+                判断最小值在左半部分还是右半部分
+        """
+        left, right = 0, len(nums) - 1
+        ans = float('inf')  # 初始化最小值为正无穷
+        
+        while left <= right:
+            mid = (left + right) // 2
+            # 更新最小值
+            ans = min(ans, nums[mid])
+            
+            # 关键判断：如果中间值 <= 右端点值，说明右半部分是有序的
+            # 最小值在左半部分（包括 mid 本身）
+            if nums[mid] <= nums[right]:
+                right = mid - 1
+            else:
+                # 否则，最小值在右半部分
+                left = mid + 1
+        
+        return ans
+```
+
+## 贪心
+
+### 买卖股票的最佳时机
+```
+class Solution:
+    def maxProfit(self, prices: List[int]) -> int:
+        """
+        买卖股票的最佳时机（只能买卖一次）
+        核心思想：遍历过程中，记录历史最低价格，同时计算当天卖出能获得的最大利润
+        """
+        max_profit = 0          # 最大利润
+        min_price = float('inf') # 历史最低价格，初始化为正无穷
+        
+        for price in prices:
+            # 更新最大利润：当前价格减去历史最低价
+            max_profit = max(max_profit, price - min_price)
+            # 更新历史最低价
+            min_price = min(min_price, price)
+        
+        return max_profit
+```
+
+### 跳跃游戏
+```
+class Solution:
+    def canJump(self, nums: List[int]) -> bool:
+        """
+        跳跃游戏
+        核心思想：贪心算法，维护当前能到达的最远位置
+        """
+        max_reach = 0  # 当前能到达的最远位置
+        
+        for i in range(len(nums)):
+            # 如果当前最远位置已经能到达或超过最后一个位置，返回 True
+            if max_reach >= len(nums) - 1:
+                return True
+            
+            # 更新最远位置：从当前位置能跳到的最远位置 i + nums[i]
+            max_reach = max(max_reach, i + nums[i])
+            
+            # 如果最远位置就是当前位置，说明无法继续前进 (nums[i]==0)
+            if i == max_reach:
+                return False
+        
+        return False
+```
+### 跳跃游戏2
+```
+class Solution:
+    def jump(self, nums: List[int]) -> int:
+        """
+        跳跃游戏 II
+        核心思想：贪心算法，每一步都选择当前范围内能跳到的最远位置
+        """
+        max_reach = 0      # 当前能到达的最远位置
+        min_steps = 0      # 当前使用的步数
+        step_end = 0       # 当前步数能到达的边界
+        
+        for i in range(len(nums)):
+            # 如果当前边界已经能到达最后一个位置，返回步数
+            if step_end >= len(nums) - 1:
+                return min_steps
+            
+            # 更新当前能到达的最远位置
+            max_reach = max(max_reach, i + nums[i])
+            
+            # 如果到达了当前步数的边界，到达这一步的最远，需要再跳一步
+            if i == step_end:
+                min_steps += 1
+                step_end = max_reach # 下一步可以到达的最远位置
+        
+        return 0  # 实际上不会执行到这里
+```
+
+### 划分字母区间
+```
+class Solution:
+    def partitionLabels(self, s: str) -> List[int]:
+        """
+        划分字母区间
+        核心思想：贪心算法，先记录每个字母最后出现的位置，
+                然后遍历字符串，维护当前段的最右边界，当 i == 最右边界时，划分一段
+        """
+        # 1. 遍历第一次，记录每个字符最后出现的位置
+        last_occur = {}
+        for i, ch in enumerate(s):
+            last_occur[ch] = i
+        
+        # 2. 遍历字符串，划分区间
+        ans = []
+        max_right = 0      # 当前段的最右边界
+        last_cut = -1      # 上一个切割点的位置
+        
+        for i, ch in enumerate(s):
+            # 更新当前段的最右边界（当前字符的最后出现位置）
+            max_right = max(max_right, last_occur[ch])
+            
+            # 如果当前位置等于最右边界，说明可以切割
+            if i == max_right:
+                # 当前段长度 = 当前位置 - 上一个切割点
+                ans.append(i - last_cut)
+                last_cut = i  # 更新切割点
+        
+        return ans
+```
+
+## 动态规划
+
+### 爬楼梯
+```
+class Solution:
+    def climbStairs(self, n: int) -> int:
+        """
+        爬楼梯
+        核心思想：动态规划，dp[i] = dp[i-1] + dp[i-2]
+        """
+        # 边界情况处理
+        if n <= 1:
+            return 1
+        
+        # 创建 dp 数组，长度为 n+1，初始化为0
+        dp = [0] * (n + 1)
+        # 初始化基础情况
+        dp[0] = 1  # 爬到第0阶（起点）有1种方法
+        dp[1] = 1  # 爬到第1阶有1种方法
+        
+        # 从第2阶开始递推
+        for i in range(2, n + 1):
+            dp[i] = dp[i - 1] + dp[i - 2]
+        
+        return dp[n]
+```
+
+### 杨辉三角
+```
+class Solution:
+    def generate(self, numRows: int) -> List[List[int]]:
+        """
+        生成杨辉三角的前 numRows 行
+        核心思想：每行首尾为1，中间元素 ret[i][j] = ret[i-1][j] + ret[i-1][j-1]
+        """
+        # 初始化结果列表
+        result = []
+        
+        # 逐行生成
+        for i in range(numRows):
+            # 创建当前行
+            row = []
+            
+            # 生成当前行的每个元素
+            for j in range(i + 1):
+                if j == 0 or j == i:
+                    # 第一个和最后一个元素为1
+                    row.append(1)
+                else:
+                    # 中间元素等于上一行对应位置和前一个位置之和
+                    row.append(result[i - 1][j] + result[i - 1][j - 1])
+            
+            # 将当前行加入结果
+            result.append(row)
+        
+        return result
+```
+
+### 打家劫舍
+```
+class Solution:
+    def rob(self, nums: List[int]) -> int:
+        """
+        打家劫舍
+        核心思想：动态规划，dp[i] 表示偷到第 i 个房屋时能获得的最大金额
+                不能偷相邻的房屋
+        """
+        n = len(nums)
+        if n == 0:
+            return 0
+        if n == 1:
+            return nums[0]
+        
+        # 初始化 dp 数组
+        dp = [0] * n
+        dp[0] = nums[0]  # 只有一家时，只能偷它
+        dp[1] = max(nums[0], nums[1])  # 有两家时，偷金额大的那家
+        
+        # 从第3家开始递推
+        for i in range(2, n):
+            # 对于第 i 家，有两种选择：
+            # 1. 不偷：金额 = dp[i-1]
+            # 2. 偷：金额 = dp[i-2] + nums[i]（因为不能偷相邻的）
+            dp[i] = max(dp[i-1], dp[i-2] + nums[i])
+        
+        return dp[-1]  # 返回最后一个元素
+```
+
+### 完全平方数
+```
+class Solution:
+    def numSquares(self, n: int) -> int:
+        """
+        完全平方数
+        核心思想：动态规划（完全背包）
+                将每个完全平方数视为一种物品，每种物品可以无限使用
+                dp[j] 表示凑成数字 j 所需的最少完全平方数个数
+        """
+        # 初始化 dp 数组，长度为 n+1，初始化为无穷大
+        dp = [float('inf')] * (n + 1)
+        dp[0] = 0  # 凑成0需要0个完全平方数
+        
+        # 外层循环：遍历所有可能的完全平方数（物品）
+        # i 表示当前考虑的完全平方数的平方根
+        for i in range(1, int(n ** 0.5) + 1):
+            square = i * i  # 当前完全平方数
+            # 内层循环：遍历背包容量（目标数）
+            for j in range(square, n + 1):
+                # 完全背包：每个物品可以无限使用
+                # dp[j] = min(不使用当前平方数, 使用当前平方数)
+                dp[j] = min(dp[j], dp[j - square] + 1)
+        
+        return dp[n] if dp[n] < float('inf') else -1
+```
+
+### 零钱兑换
+```
+class Solution:
+    def coinChange(self, coins: List[int], amount: int) -> int:
+        """
+        零钱兑换
+        核心思想：动态规划（完全背包）
+                将每种硬币视为一种物品，每种物品可以无限使用
+                dp[j] 表示凑成金额 j 所需的最少硬币个数
+        """
+        # 初始化 dp 数组，长度为 amount+1，初始化为无穷大
+        dp = [float('inf')] * (amount + 1)
+        dp[0] = 0  # 凑成0元需要0个硬币
+        
+        # 外层循环：遍历每种硬币（物品）
+        for coin in coins:
+            # 内层循环：正序遍历背包容量（金额）
+            # 正序保证每种硬币可以重复使用（完全背包）
+            for j in range(coin, amount + 1):
+                # 状态转移：不选当前硬币 vs 选当前硬币
+                dp[j] = min(dp[j], dp[j - coin] + 1)
+        
+        # 如果 dp[amount] 仍然是无穷大，说明无法凑成，返回 -1
+        return dp[amount] if dp[amount] < float('inf') else -1
+```
+
+###  划分字母区间
+![alt text](./pic/单词拆分.png)
+```
+class Solution:
+    def wordBreak(self, s: str, wordDict: List[str]) -> bool:
+        """
+        单词拆分
+        核心思想：动态规划，dp[i] 表示 s 的前 i 个字符能否被成功拆分
+        """
+        # 将字典转换为集合，方便 O(1) 查找
+        word_set = set(wordDict)
+        n = len(s)
+        
+        # dp[i] 表示 s[0:i] 能否被拆分
+        dp = [False] * (n + 1)
+        dp[0] = True  # 空字符串可以被拆分
+        
+        # 遍历所有可能的结束位置 i
+        for i in range(1, n + 1):
+            # 枚举所有可能的分割点 j，检查 s[j:i] 是否在字典中
+            for j in range(i):
+                # 如果 dp[j] 为 True 且 s[j:i] 在字典中，则 dp[i] 为 True
+                if dp[j] and s[j:i] in word_set:
+                    dp[i] = True
+                    break  # 找到一个分割点即可，无需继续
+        
+        return dp[n]
+```
+
+### 最长递增子序列
+```
+class Solution:
+    def lengthOfLIS(self, nums: List[int]) -> int:
+        """
+        最长递增子序列
+        核心思想：动态规划，dp[i] 表示以 nums[i] 结尾的最长递增子序列的长度
+        """
+        n = len(nums)
+        if n == 0:
+            return 0
+        
+        # dp[i] 表示以 nums[i] 结尾的最长递增子序列的长度
+        dp = [1] * n  # 每个元素本身就是一个长度为1的递增子序列
+        max_len = 1   # 记录全局最大值
+        
+        # 遍历每个位置 i
+        for i in range(1, n):
+            # 遍历 i 之前的所有位置 j
+            for j in range(i):
+                # 如果 nums[j] < nums[i]，可以接在后面形成更长的递增子序列
+                if nums[j] < nums[i]:
+                    dp[i] = max(dp[i], dp[j] + 1)
+            # 更新全局最大值
+            max_len = max(max_len, dp[i])
+        
+        return max_len
+```
+
+### 乘积最大子数组
+```
+class Solution:
+    def maxProduct(self, nums: List[int]) -> int:
+        """
+        乘积最大子数组
+        核心思想：动态规划，由于负数相乘可能使最大值变最小值、最小值变最大值，
+                因此需要同时维护以当前位置结尾的最大乘积和最小乘积
+        """
+        n = len(nums)
+        if n == 0:
+            return 0
+        
+        # dp_max[i] 表示以 nums[i] 结尾的子数组的最大乘积
+        # dp_min[i] 表示以 nums[i] 结尾的子数组的最小乘积
+        dp_max = [0] * n
+        dp_min = [0] * n
+        
+        # 初始化第一个元素
+        dp_max[0] = nums[0]
+        dp_min[0] = nums[0]
+        max_product = nums[0]
+        
+        # 遍历每个位置
+        for i in range(1, n):
+            # 当前元素单独作为一个子数组，或者与前面的子数组合并
+            # 由于可能负数相乘，最大值可能来自：
+            # 1. 当前元素本身
+            # 2. 前一个最大值 × 当前元素
+            # 3. 前一个最小值 × 当前元素（当当前元素为负数时）
+            dp_max[i] = max(nums[i], dp_max[i-1] * nums[i], dp_min[i-1] * nums[i])
+            # 最小值类似，取三者中的最小值
+            dp_min[i] = min(nums[i], dp_max[i-1] * nums[i], dp_min[i-1] * nums[i])
+            
+            # 更新全局最大值
+            max_product = max(max_product, dp_max[i])
+        
+        return max_product
+```
+### 分割等和子集
+```
+class Solution:
+    def canPartition(self, nums: List[int]) -> bool:
+        total = sum(nums)
+        if total % 2 != 0:
+            return False
+        
+        target = total // 2
+        
+        # dp[j] 表示容量为 j 的背包能装下的最大和
+        dp = [0] * (target + 1)
+        
+        # 0-1背包：外层物品，内层倒序 价值与重量一样
+        for num in nums:
+            for j in range(target, num - 1, -1):
+                dp[j] = max(dp[j], dp[j - num] + num)
+        
+        # 如果背包能恰好装满，则 dp[target] == target
+        return dp[target] == target
+```
+ ### 最长有效括号
+ ```
+ class Solution:
+    def longestValidParentheses(self, s: str) -> int:
+        """
+        最长有效括号
+        核心思想：动态规划，dp[i] 表示以 s[i] 结尾的最长有效括号子串的长度
+        """
+        n = len(s)
+        if n <= 1:
+            return 0
+        
+        # dp[i] 表示以 i 结尾的最长有效括号长度
+        dp = [0] * n
+        max_len = 0
+        
+        # 从 i=1 开始遍历，因为有效括号至少需要两个字符
+        for i in range(1, n):
+            if s[i] == ')':
+                if s[i-1] == '(':
+                    # 情况1：形如 "...()"，直接匹配
+                    # dp[i] = dp[i-2] + 2
+                    dp[i] = (dp[i-2] if i >= 2 else 0) + 2
+                
+                elif i - dp[i-1] > 0 and s[i - dp[i-1] - 1] == '(':
+                    # 情况2：形如 "...((...))"，中间是有效括号，且前面有一个 '(' 与之匹配
+                    # dp[i] = dp[i-1] + 2 + dp[i - dp[i-1] - 2]（如果存在的话）
+                    dp[i] = dp[i-1] + 2
+                    if i - dp[i-1] >= 2:
+                        dp[i] += dp[i - dp[i-1] - 2]
+                
+                # 更新最大值
+                max_len = max(max_len, dp[i])
+        
+        return max_len
+```
+
+### 不同路径
+```
+class Solution:
+    def uniquePaths(self, m: int, n: int) -> int:
+        """
+        不同路径
+        核心思想：动态规划，dp[i][j] 表示到达 (i,j) 的路径数
+                只能向右或向下移动
+        """
+        # 创建 dp 数组，大小为 (m+1) x (n+1)，多出一行一列方便处理边界
+        # 注意：原代码从1开始索引，这里保持一致
+        dp = [[0] * (n + 1) for _ in range(m + 1)]
+        
+        # 起点位置 (1,1) 的路径数为1
+        dp[1][1] = 1
+        
+        # 遍历每个格子
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                # 跳过起点
+                if i == 1 and j == 1:
+                    continue
+                # 到达 (i,j) 的路径数 = 从左边来的 + 从上边来的
+                dp[i][j] = dp[i][j-1] + dp[i-1][j]
+        
+        return dp[m][n]
+```
+### 最小路径和
+```
+class Solution:
+    def minPathSum(self, grid: List[List[int]]) -> int:
+        """
+        最小路径和
+        核心思想：动态规划，dp[i][j] 表示到达 (i,j) 的最小路径和
+                只能向右或向下移动
+        """
+        m, n = len(grid), len(grid[0])
+        
+        # 创建 dp 数组，与原网格大小相同
+        dp = [[0] * n for _ in range(m)]
+        
+        # 遍历每个格子
+        for i in range(m):
+            for j in range(n):
+                if i == 0 and j == 0:
+                    # 起点：就是它本身
+                    dp[i][j] = grid[i][j]
+                elif i == 0:
+                    # 第一行：只能从左边过来
+                    dp[i][j] = dp[i][j-1] + grid[i][j]
+                elif j == 0:
+                    # 第一列：只能从上面过来
+                    dp[i][j] = dp[i-1][j] + grid[i][j]
+                else:
+                    # 其他位置：取左边和上边的较小值，加上当前格子
+                    dp[i][j] = min(dp[i][j-1], dp[i-1][j]) + grid[i][j]
+        
+        return dp[m-1][n-1]
+```
+
+### 最长回文子串
+```
+class Solution:
+    def longestPalindrome(self, s: str) -> str:
+        """
+        最长回文子串
+        核心思想：动态规划，dp[i][j] 表示子串 s[i:j+1] 是否是回文串
+        """
+        n = len(s)
+        if n < 2:
+            return s
+        
+        # 创建 dp 表，dp[i][j] 表示 s[i..j] 是否是回文串
+        dp = [[False] * n for _ in range(n)]
+        
+        # 初始化：所有长度为1的子串都是回文
+        for i in range(n):
+            dp[i][i] = True
+        
+        max_len = 1
+        start = 0
+        
+        # 遍历所有可能的子串长度
+        # 注意：这里按列遍历，保证计算 dp[i][j] 时 dp[i+1][j-1] 已知
+        for j in range(1, n):  # 右边界
+            for i in range(j):  # 左边界
+                if s[i] == s[j]:
+                    # 如果子串长度 <= 2（即 j-i <= 2），直接为回文
+                    if j - i <= 2:
+                        dp[i][j] = True
+                    else:
+                        # 否则，取决于中间的子串是否是回文
+                        dp[i][j] = dp[i+1][j-1]
+                
+                # 如果当前子串是回文，更新最长记录
+                if dp[i][j] and j - i + 1 > max_len:
+                    max_len = j - i + 1
+                    start = i
+        
+        return s[start:start + max_len]
+```
+### 最长公共子序列
+```
+class Solution:
+    def longestCommonSubsequence(self, text1: str, text2: str) -> int:
+        """
+        最长公共子序列
+        核心思想：动态规划，dp[i][j] 表示 text1 的前 i 个字符和 text2 的前 j 个字符的 LCS 长度
+        """
+        m, n = len(text1), len(text2)
+        
+        # 创建 dp 表，大小为 (m+1) x (n+1)，多出一行一列方便处理边界
+        dp = [[0] * (n + 1) for _ in range(m + 1)]
+        
+        # 遍历所有位置
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if text1[i-1] == text2[j-1]:
+                    # 当前字符相等，可以加入公共子序列
+                    dp[i][j] = dp[i-1][j-1] + 1
+                else:
+                    # 当前字符不等，取左边或上边的较大值
+                    dp[i][j] = max(dp[i-1][j], dp[i][j-1])
+        
+        return dp[m][n]
+```
+
+
+### 编辑距离
+```
+class Solution:
+    def minDistance(self, word1: str, word2: str) -> int:
+        """
+        编辑距离
+        核心思想：动态规划，dp[i][j] 表示 word1 的前 i 个字符转换为 word2 的前 j 个字符所需的最少操作数
+        操作：插入、删除、替换，每种操作代价为1
+        """
+        m, n = len(word1), len(word2)
+        
+        # 创建 dp 表，大小为 (m+1) x (n+1)，多出一行一列处理空字符串
+        dp = [[0] * (n + 1) for _ in range(m + 1)]
+        
+        # 初始化边界：将一个字符串转换为空串
+        for i in range(1, m + 1):
+            dp[i][0] = i  # 删除 i 个字符
+        for j in range(1, n + 1):
+            dp[0][j] = j  # 插入 j 个字符
+        
+        # 填充 dp 表
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if word1[i-1] == word2[j-1]:
+                    # 当前字符相等，不需要额外操作
+                    dp[i][j] = dp[i-1][j-1]
+                else:
+                    # 当前字符不等，取三种操作的最小值 + 1
+                    dp[i][j] = min(
+                        dp[i-1][j],      # 删除 word1[i-1]
+                        dp[i][j-1],      # 插入 word2[j-1] 到 word1
+                        dp[i-1][j-1]     # 替换 word1[i-1] 为 word2[j-1]
+                    ) + 1
+        
+        return dp[m][n]
+```
+
+### 
+```
+```
+
+
+### 
+```
+```
