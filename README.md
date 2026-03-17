@@ -1,7 +1,292 @@
+## 哈希
 
+### 1. 两数之和
+![alt text](./pic/两数之和.png)
+```
+class Solution:
+    def twoSum(self, nums: List[int], target: int) -> List[int]:
+        hash = dict()
+        for i,num in enumerate(nums):
+            if target - num in hash:
+                return [hash[target-num],i]
+            hash[num] = i
+        return []
+```
 
+### 2. 字母异位词分组
+![alt text](./pic/字母异位词分组.png)
+```
+# C++可以对string排序
+# python只能返回有序的列表，故需要把列表再拼成str ''.join(list)
+# defaultdict(list) 带默认值的字典
+# dict.values/ dict.keys 要类型转换为list
+from typing import List
+import collections
+def groupAnagrams(strs: List[str]) -> List[List[str]]:
+    hash = collections.defaultdict(list)
+    for str in strs:
+        key = ''.join(sorted(str))
+        hash[key].append(str)
+    
+    return list(hash.values())
+```
+### 3. 最长连续序列
+![alt text](./pic/最长连续序列.png)
+```
+from typing import List
 
+def longestConsecutive(nums: List[int]) -> int:
+    """
+    最长连续序列
+    核心思想：使用哈希集合存储所有数字，只从每个连续序列的最小值开始向后查找
+    """
+    # 将数组转换为哈希集合，去重并支持 O(1) 查找
+    num_set = set(nums)
+    max_len = 0
+    
+    # 遍历集合中的每个数字
+    for num in num_set:
+        # 关键优化：如果 num-1 存在，说明 num 不是序列的最小值，跳过
+        # 这样每个序列只会从最小值开始查找一次
+        if num - 1 in num_set:
+            continue
+        
+        # num 是当前连续序列的最小值，开始向后查找
+        current_num = num + 1
+        while current_num in num_set:
+            current_num += 1
+        
+        # 更新最大长度
+        max_len = max(max_len, current_num - num)
+    
+    return max_len
 
+```
+
+## 双指针
+### 4. 移动零
+![alt text](./pic/移动零.png)
+```
+class Solution:
+    def moveZeroes(self, nums: List[int]) -> None:
+        left = right = 0
+        while right<len(nums):
+            if nums[right] !=0:
+                nums[left], nums[right] = nums[right], nums[left]
+                left+=1
+            right+=1
+```
+### 5. 盛水最多的容器
+![alt text](./pic/盛水最多的容器.png)
+```
+class Solution:
+    def maxArea(self, height: List[int]) -> int:
+        """
+        盛最多水的容器
+        核心思想：双指针，每次移动较短的那条边，因为面积由较短的边决定
+        """
+        left = 0
+        right = len(height) - 1
+        max_water = 0
+        
+        while left < right:
+            # 计算当前面积：宽度 × 较小高度
+            current_water = (right - left) * min(height[left], height[right])
+            max_water = max(max_water, current_water)
+            
+            # 移动较短的边
+            if height[left] < height[right]:
+                left += 1
+            else:
+                right -= 1
+        
+        return max_water
+```
+
+### 6. 三数之和
+![alt text](./pic/三数之和.png)
+```
+class Solution:
+    def threeSum(self, nums: List[int]) -> List[List[int]]:
+        """
+        三数之和
+        核心思想：排序 + 双指针
+                固定一个数，在剩余区间内用双指针寻找两数之和等于 -nums[i]
+        """
+        # 1. 排序，便于去重和使用双指针
+        nums.sort()
+        n = len(nums)
+        ans = []
+        
+        # 2. 固定第一个数
+        for i in range(n):
+            # 去重：如果当前数和前一个数相同，跳过
+            if i > 0 and nums[i] == nums[i-1]:
+                continue
+            
+            # 3. 双指针：j 从 i+1 开始，k 从末尾开始
+            k = n - 1
+            target = -nums[i]  # 需要找的两数之和
+            
+            for j in range(i + 1, n):
+                # 去重：如果当前数和前一个数相同，跳过
+                if j > i + 1 and nums[j] == nums[j-1]:
+                    continue
+                
+                # 移动 k 指针，直到 nums[j] + nums[k] <= target
+                while j < k and nums[j] + nums[k] > target:
+                    k -= 1
+                
+                # 如果指针重合，说明后面的数都太大或太小，跳出循环
+                if j == k:
+                    break
+                
+                # 找到一组解
+                if nums[j] + nums[k] == target:
+                    ans.append([nums[i], nums[j], nums[k]])
+        
+        return ans
+```
+### 7. 接雨水
+![alt text](./pic/接雨水.png)
+```
+class Solution:
+    def trap(self, height: List[int]) -> int:
+        length = len(height)
+        stack = []
+        sum = 0
+        for i in range(0,length):
+
+            while stack and height[i] > height[stack[-1]]:
+                # 弹出底部
+                bottom = stack.pop()
+                
+                # 如果栈为空，说明没有左边界，无法形成凹槽
+                if not stack:
+                    break
+                    
+                # 左边界是栈顶
+                left = stack[-1]
+                
+                # 计算宽度
+                width = i - left - 1
+                # 计算高度（取左右边界中较小的减去底部高度）
+                h = min(height[left], height[i]) - height[bottom]
+                
+                sum += width * h
+            
+            # 将当前柱子索引入栈
+            stack.append(i)
+        return sum
+```
+## 滑动窗口
+### 8. 无重复的最长字串
+![alt text](./pic/无重复的最长子串.png)
+```
+class Solution:
+    def lengthOfLongestSubstring(self, s: str) -> int:
+        """
+        无重复字符的最长子串
+        核心思想：滑动窗口，用哈希表记录窗口内字符的出现情况
+        """
+        # 哈希表记录字符是否在当前窗口中
+        char_set = {}
+        ans = 0
+        n = len(s)
+        
+        # 处理边界情况
+        if n <= 1:
+            return n
+        
+        # 右指针
+        j = 0
+        
+        # 左指针 i 遍历字符串
+        for i in range(n):
+            # 当左指针移动时，从窗口中移除前一个字符
+            if i > 0:
+                char_set[s[i-1]] = 0
+            
+            # 移动右指针，尽可能扩大窗口
+            while j < n:
+                # 如果当前字符已经在窗口中，停止扩大
+                if char_set.get(s[j], 0) == 1:
+                    break
+                
+                # 将当前字符加入窗口
+                char_set[s[j]] = 1
+                j += 1
+                
+                # 更新最大长度
+                ans = max(ans, j - i)
+        
+        return ans
+```
+### 9. 找到字符串中的所有字母异位词
+![alt text](./pic/找到字符串中所有字母异位词.png)
+```
+
+from typing import List
+
+def findAnagrams(s: str, p: str) -> List[int]:
+    if len(s) < len(p):
+        return []
+    
+    hash_1 = {}  # 统计p的字符频率
+    hash_2 = {}  # 统计窗口的字符频率
+    ans = []
+    
+    # 统计p中字符频率
+    for ch in p:
+        hash_1[ch] = hash_1.get(ch, 0) + 1
+    
+    # 初始化第一个窗口
+    len_p = len(p)
+    for i in range(len_p):
+        hash_2[s[i]] = hash_2.get(s[i], 0) + 1
+    
+    # 检查第一个窗口
+    if hash_1 == hash_2:
+        ans.append(0)
+    
+    # 滑动窗口
+    for i in range(len_p, len(s)):
+        # 添加新字符
+        hash_2[s[i]] = hash_2.get(s[i], 0) + 1
+        
+        # 移除旧字符
+        old_char = s[i - len_p]
+        hash_2[old_char] -= 1
+        # 如果字符计数为0，删除该键
+        if hash_2[old_char] == 0:
+            del hash_2[old_char]
+        
+        if hash_1 == hash_2:
+            ans.append(i - len_p + 1)
+    
+    return ans
+```
+### 10. 和为K的子数组
+![alt text](./pic/和为K的子数组.png)
+```
+class Solution:
+    def subarraySum(self, nums: List[int], k: int) -> int:
+        prefix_sum_count = {0: 1}  # 初始前缀和为0，出现1次
+        current_sum = 0
+        ans = 0
+        
+        for num in nums:
+            current_sum += num  # 计算当前前缀和
+            
+            # 查找是否存在前缀和等于 current_sum - k
+            # 如果存在，说明从那个位置到当前位置的子数组和为k
+            ans += prefix_sum_count.get(current_sum - k, 0)
+            
+            # 更新当前前缀和的出现次数
+            prefix_sum_count[current_sum] = prefix_sum_count.get(current_sum, 0) + 1
+        
+        return ans
+```
 
 ## 子串
 ### 11. 滑动窗口最大值
@@ -1456,11 +1741,125 @@ class Solution:
         return dp[m][n]
 ```
 
-### 
+## 技巧
+###  只出现一次的数字
 ```
+def singleNumber(self, nums: List[int]) -> int:
+    """异或运算：相同数字异或为0，0异或任何数等于任何数"""
+    result = 0
+    for num in nums:
+        result ^= num
+    return result
 ```
 
 
 ### 
 ```
+class Solution:
+    def majorityElement(self, nums: List[int]) -> int:
+        """
+        多数元素
+        核心思想：使用哈希表统计每个元素出现的次数，当某个元素出现次数 > n/2 时返回
+        """
+        n = len(nums)
+        count_map = {}
+        
+        for num in nums:
+            # 统计当前数字的出现次数
+            count_map[num] = count_map.get(num, 0) + 1
+            
+            # 如果当前数字的出现次数超过半数，直接返回
+            if count_map[num] > n // 2:
+                return num
+        
+        return -1  # 题目保证有解，不会执行到这里
+```
+
+### 颜色分类
+```
+class Solution:
+    def sortColors(self, nums: List[int]) -> None:
+        """
+        颜色分类（荷兰国旗问题）
+        核心思想：两次遍历，第一次把所有的0放到前面，第二次把所有的1放到0后面
+        """
+        n = len(nums)
+        ptr = 0  # ptr 指向当前已排好位置的下一个位置
+        
+        # 第一次遍历：将所有 0 移动到数组前面
+        for i in range(n):
+            if nums[i] == 0:
+                nums[i], nums[ptr] = nums[ptr], nums[i]
+                ptr += 1
+        
+        # 第二次遍历：将所有 1 移动到 0 的后面
+        for i in range(ptr, n):
+            if nums[i] == 1:
+                nums[i], nums[ptr] = nums[ptr], nums[i]
+                ptr += 1
+```
+
+### 下一个排列
+```
+class Solution:
+    def nextPermutation(self, nums: List[int]) -> None:
+        """
+        下一个排列
+        核心思想：1. 从后向前找到第一个升序对 (nums[i-1] < nums[i])
+                2. 在 i 到末尾找到第一个大于 nums[i-1] 的数并交换
+                3. 将 i 到末尾反转（使其变为升序，即最小排列）
+        """
+        n = len(nums)
+        if n <= 1:
+            return
+        
+        # 1. 从后向前找到第一个升序对 (nums[i-1] < nums[i])
+        i = n - 1
+        while i > 0 and nums[i-1] >= nums[i]:
+            i -= 1
+        
+        # 如果找到了升序对
+        if i > 0:  # i-1 就是需要交换的位置
+            # 2. 从后向前找到第一个大于 nums[i-1] 的数
+            j = n - 1
+            while nums[j] <= nums[i-1]:
+                j -= 1
+            # 交换
+            nums[i-1], nums[j] = nums[j], nums[i-1]
+        
+        # 3. 反转 i 到末尾的部分（使其变为升序）
+        # 如果 i == 0，说明整个数组是降序，反转整个数组
+        left, right = i, n - 1
+        while left < right:
+            nums[left], nums[right] = nums[right], nums[left]
+            left += 1
+            right -= 1
+```
+
+### 寻找重复数
+```
+class Solution:
+    def findDuplicate(self, nums: List[int]) -> int:
+        """
+        寻找重复数
+        核心思想：将数组视为链表，nums[i] 作为 next 指针的索引
+                利用快慢指针找到环的入口，即为重复的数
+        """
+        # 初始化快慢指针
+        slow = nums[0]
+        fast = nums[nums[0]]
+        
+        # 第一阶段：快慢指针在环中相遇
+        while slow != fast:
+            slow = nums[slow]
+            fast = nums[nums[fast]]
+        
+        # 第二阶段：将慢指针重置到起点，然后快慢指针以相同速度移动
+        # 相遇点即为环的入口（重复的数）
+        slow = 0
+        while slow != fast:
+            slow = nums[slow]
+            fast = nums[fast]
+        
+        return slow
 ```
