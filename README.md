@@ -321,6 +321,78 @@ class Solution:
             ans.append(-q[0][0])
         
         return ans
+
+
+class Solution:
+    def maxSlidingWindow(self, nums: List[int], k: int) -> List[int]:
+        # 预分配结果数组，长度为窗口个数 = 数组长度 - 窗口大小 + 1
+        ans = [0] * (len(nums) - k + 1)
+        # 双端队列，存储元素的下标，保证队列中的下标对应的值是单调递减的
+        # 这样队首元素永远是当前窗口的最大值
+        q = deque()
+
+        # 遍历数组，i 是当前元素下标，x 是当前元素值
+        for i, x in enumerate(nums):
+            # ========== 第一步：维护队列的单调性（右边入队） ==========
+            # 当队列不为空，且队尾元素对应的值 <= 当前元素 x 时
+            # 说明队尾元素不可能是后续任何窗口的最大值了（因为 x 更大且更新）
+            # 所以从队尾弹出这些较小的元素
+            while q and nums[q[-1]] <= x:
+                q.pop()
+            # 将当前元素下标加入队尾，此时队列仍保持单调递减
+            q.append(i)
+
+            # ========== 第二步：移除离开窗口的元素（左边出队） ==========
+            # 计算当前窗口的左边界索引
+            # 窗口范围：[left, i]，窗口大小为 k
+            left = i - k + 1
+            # 如果队首元素的下标 < left，说明队首元素已经不在当前窗口内了
+            # 需要从队首弹出
+            if q[0] < left:
+                q.popleft()
+
+            # ========== 第三步：记录当前窗口的最大值 ==========
+            # 当左边界 >= 0 时，说明已经形成了完整的窗口（从第 k-1 个元素开始）不然窗口元素没填满【null，null，null， 0】
+            if left >= 0:
+                # 由于队列是单调递减的，队首元素就是当前窗口的最大值
+                # 将最大值存入结果数组的对应位置
+                ans[left] = nums[q[0]]
+
+        return ans
+
+
+from collections import deque
+
+# 创建
+dq = deque()                    # 空队列
+dq = deque([1,2,3])             # 从列表创建
+dq = deque(maxlen=5)            # 固定大小队列
+
+# 添加
+dq.append(x)                    # 右端添加
+dq.appendleft(x)                # 左端添加
+dq.extend([a,b])                # 右端扩展
+dq.extendleft([a,b])            # 左端扩展（注意顺序）
+
+# 删除
+dq.pop()                        # 右端删除并返回
+dq.popleft()                    # 左端删除并返回
+dq.remove(x)                    # 删除第一个x
+dq.clear()                      # 清空
+
+# 查看
+dq[0]                           # 查看左端
+dq[-1]                          # 查看右端
+len(dq)                         # 长度
+x in dq                         # 是否包含
+dq.count(x)                     # 计数
+
+# 操作
+dq.rotate(n)                    # 旋转
+dq.reverse()                    # 反转
+
+# 转换
+list(dq)                        # 转为列表
 ```
 ### 12. 最小覆盖字串
 ![alt text](./pic/最小覆盖字串.png)
@@ -328,54 +400,27 @@ class Solution:
 ```
 class Solution:
     def minWindow(self, s: str, t: str) -> str:
-        # 两个哈希表：ori存储t中每个字符的需求量，cnt存储当前窗口中各字符的存量
-        ori = collections.defaultdict(int)  # 需求表
-        cnt = collections.defaultdict(int)  # 当前窗口存量表
+        # 使用 Counter 记录 t 中每个字符的需求量
+        from collections import Counter
+        cnt_t = Counter(t)                # t 中字符的出现次数
+        cnt_s = Counter()                 # 当前窗口内字符的出现次数
         
-        # 检查当前窗口是否满足需求
-        def check() -> bool:
-            for c, need_count in ori.items():
-                # 如果当前窗口中某个字符的数量小于需求量，则不满足
-                if cnt[c] < need_count:
-                    return False
-            return True
+        ans_left, ans_right = -1, len(s)  # 记录最短覆盖子串的左右边界
+        left = 0                          # 窗口左指针
         
-        # 初始化需求表：统计t中每个字符的出现次数
-        for c in t:
-            ori[c] += 1
+        for right, c in enumerate(s):     # 右指针遍历 s 由于答案唯一，故第一次搜到即可停止右边界
+            cnt_s[c] += 1                 # 将右端字符加入窗口
+            # 当窗口已“涵盖” t 时（即窗口内每种字符数 >= t 的需求）
+            while cnt_s >= cnt_t:         # Python 中 Counter 支持直接比较
+                # 若当前窗口更短，则更新答案
+                if right - left < ans_right - ans_left:
+                    ans_left, ans_right = left, right
+                # 尝试收缩左边界：将左端字符移出窗口
+                cnt_s[s[left]] -= 1
+                left += 1
         
-        # 滑动窗口的左右指针
-        l = 0
-        r = -1  # 初始时窗口为空，r指向-1
-        
-        # 记录最小窗口的信息
-        length = sys.maxsize  # 当前最小窗口长度
-        ansL = -1  # 最小窗口的左边界
-        ansR = -1  # 最小窗口的右边界（这里其实没用上，但保留原C++风格）
-        
-        # 扩展右边界，直到遍历完整个s
-        while r < len(s) - 1:  # 当r还可以向右移动时
-            # 1. 右指针右移，将新字符加入窗口
-            r += 1
-            # 如果这个字符是t中需要的，则更新存量表
-            if s[r] in ori:
-                cnt[s[r]] += 1
-            
-            # 2. 当窗口满足条件时，尝试收缩左边界
-            while check() and l <= r:
-                # 如果当前窗口比之前记录的最小窗口还小，则更新记录
-                if r - l + 1 < length:
-                    length = r - l + 1
-                    ansL = l  # 记录左边界位置
-                
-                # 左指针右移前，如果左边要移除的字符是t中需要的，则减少存量
-                if s[l] in ori:
-                    cnt[s[l]] -= 1
-                # 左指针右移，收缩窗口
-                l += 1
-        
-        # 如果没找到符合条件的窗口，返回空字符串；否则返回最小窗口子串
-        return "" if ansL == -1 else s[ansL:ansL + length]
+        # 若 ans_left 未被更新，说明无解，否则返回对应子串
+        return "" if ans_left < 0 else s[ans_left:ans_right + 1]
 
 ```
 
@@ -1796,6 +1841,47 @@ class Solution:
             if nums[i] == 1:
                 nums[i], nums[ptr] = nums[ptr], nums[i]
                 ptr += 1
+
+class Solution:
+    def sortColors(self, nums: List[int]) -> None:
+        """
+        Do not return anything, modify nums in-place instead.
+        使用三指针（双指针）原地排序，将0、1、2按顺序排列
+        """
+        # p0: 指向下一个0应该放置的位置（0区域的右边界）
+        # p1: 指向下一个1应该放置的位置（1区域的右边界）
+        # i: 当前遍历的指针
+        p0 = 0
+        p1 = 0
+        i = 0
+        
+        while i < len(nums):
+            if nums[i] == 0:
+                # 情况1：当前元素是0
+                # 将0交换到p0位置
+                nums[i], nums[p0] = nums[p0], nums[i]
+                
+                # 关键处理：如果p0 < p1，说明刚才交换过来的可能是1
+                # 需要再交换一次，将1放到正确位置
+                if p0 < p1:
+                    nums[i], nums[p1] = nums[p1], nums[i]
+                
+                # 0和1的区域都向右扩展
+                p0 += 1
+                p1 += 1
+                
+            elif nums[i] == 1:
+                # 情况2：当前元素是1
+                # 将1交换到p1位置
+                nums[i], nums[p1] = nums[p1], nums[i]
+                # 1区域向右扩展
+                p1 += 1
+            
+            # 情况3：当前元素是2，不需要处理，直接跳过
+            # 2会自动被交换到右边
+            
+            i += 1
+    
 ```
 
 ### 下一个排列
