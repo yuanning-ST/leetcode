@@ -743,53 +743,26 @@ class Solution:
 ### 组合总和
 ![alt text](./pic/组合总和.png)
 ```
-from typing import List
-
 class Solution:
     def combinationSum(self, candidates: List[int], target: int) -> List[List[int]]:
-        """
-        组合总和（可重复使用同一元素）
-        核心思想：回溯法，每次从当前索引开始尝试，避免重复组合
-        """
-        # 初始化结果列表、当前路径和当前和
-        self.ans = []          # 存放所有有效组合
-        self.path = []         # 当前正在构建的组合
-        self.current_sum = 0   # 当前路径的和
+        ans = []
+        path = []
+        def dfs(nums,start, sum, target):
+            if sum==target:
+                ans.append(path[:])
+            if sum > target: # 由于可以重复，故无法知道什么时候递归停止，只能等到sum超了才可以停，因为num都>0
+                return 
+
+            for  i in range(start, len(nums)):
+                sum+=nums[i]
+                path.append(nums[i])
+                dfs(nums,i,sum,target)
+                path.pop()
+                sum-=nums[i]
         
-        # 开始回溯，从索引0开始
-        self.backtrack(candidates, target, 0)
-        return self.ans
-    
-    def backtrack(self, candidates: List[int], target: int, start: int) -> None:
-        """
-        回溯函数
-        candidates: 候选数组
-        target: 目标和
-        start: 当前可选的起始索引（保证组合递增，避免重复）
-        """
-        # 剪枝：如果当前和已经超过目标，直接返回
-        if self.current_sum > target:
-            return
-        
-        # 找到一个有效组合，加入结果
-        if self.current_sum == target:
-            # 注意：需要加入当前路径的副本，因为后续会修改
-            self.ans.append(self.path[:])
-            # 注意：这里没有立即返回，因为后续尝试都会使和变大，但下一层递归会因 >target 而返回
-            # 为了效率，也可以在这里加上 return，但原代码没有，我们保留原样
-        
-        # 从 start 开始遍历，保证每个元素只考虑一次（但可以重复使用，因为下一层仍从当前索引开始）
-        for i in range(start, len(candidates)):
-            # 做选择：将 candidates[i] 加入路径，并累加和
-            self.path.append(candidates[i])
-            self.current_sum += candidates[i]
-            
-            # 递归：因为可以重复使用同一元素，下一层仍从 i 开始
-            self.backtrack(candidates, target, i)
-            
-            # 撤销选择：回溯，恢复状态
-            self.path.pop()
-            self.current_sum -= candidates[i]
+        dfs(candidates,0,0,target)
+        return ans
+
 
 ```
 
@@ -798,101 +771,78 @@ class Solution:
 ```
 class Solution:
     def generateParenthesis(self, n: int) -> List[str]:
-        """
-        生成所有有效的括号组合（暴力递归法）
-        核心思想：递归生成所有可能的 2^(2n) 种括号序列，然后逐一验证有效性
-        """
-        # 初始化结果列表和当前路径字符串
-        self.ans = []
-        self.path = []
+        ans = []
         
-        def backtrack():
-            """回溯生成所有可能的括号序列"""
-            # 如果当前路径长度达到 2n，检查是否有效
-            if len(self.path) == 2 * n:
-                if is_valid(self.path):
-                    self.ans.append(''.join(self.path))
+        def dfs(path, left, right):
+            # 左括号和右括号都用完了
+            if left == n and right == n: # 由于在递归中已经限制了，所以到这一步的肯定是符合条件的，即终止递归即符合
+                ans.append(path)
                 return
             
-            # 尝试添加左括号
-            self.path.append('(')
-            backtrack()
-            self.path.pop()
+            # 可以加左括号
+            if left < n:
+                dfs(path + '(', left + 1, right)
             
-            # 尝试添加右括号
-            self.path.append(')')
-            backtrack()
-            self.path.pop()
+            # 可以加右括号（右括号数量必须小于左括号）
+            if right < left:
+                dfs(path + ')', left, right + 1)
         
-        def is_valid(s: List[str]) -> bool:
-            """验证括号序列是否有效"""
-            balance = 0
-            for ch in s:
-                if ch == '(':
-                    balance += 1
-                else:  # ch == ')'
-                    balance -= 1
-                if balance < 0:  # 右括号多于左括号，提前失效
-                    return False
-            return balance == 0  # 最后左右括号数相等
-        
-        backtrack()
-        return self.ans
+        dfs("", 0, 0)
+        return ans
 ```
-
 ### 单词搜索
 ![alt text](./pic/单词搜索.png)
 ```
 class Solution:
     def exist(self, board: List[List[str]], word: str) -> bool:
-        """
-        判断单词是否存在于二维网格中
-        核心思想：回溯 + 剪枝，从每个格子出发深度优先搜索
-        """
-        # 获取网格的行数和列数
-        rows, cols = len(board), len(board[0])
-        # 创建访问标记矩阵，初始全为 False
-        visited = [[False] * cols for _ in range(rows)]
-        
-        # 定义四个方向：右、左、下、上
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-        
-        def backtrack(i: int, j: int, k: int) -> bool:
+        # 全局标志，记录是否找到单词
+        self.flag = False
+        m, n = len(board), len(board[0])  # 获取网格的行数和列数
+        # 访问标记数组，记录每个格子是否已被当前路径使用
+        visited = [[False] * n for _ in range(m)]
+
+        def dfs(i, x, y):
             """
-            从 board[i][j] 开始匹配 word 的第 k 个字符
-            返回是否找到一条完整路径
+            深度优先搜索
+            i: 当前要匹配的字符在word中的索引
+            x, y: 当前在网格中的位置
             """
-            # 如果当前字符不匹配，直接返回 False
-            if board[i][j] != word[k]:
-                return False
+            # 边界检查：超出网格范围则返回
+            if x < 0 or x >= m or y < 0 or y >= n:
+                return
             
-            # 如果已经匹配到最后一个字符，说明找到完整单词
-            if k == len(word) - 1:
-                return True
+            # 如果当前格子已访问，或者字符不匹配，则返回
+            if visited[x][y] or board[x][y] != word[i]:
+                return
             
-            # 标记当前格子已访问
-            visited[i][j] = True
+            # 如果已经匹配完最后一个字符，说明找到了单词
+            if i == len(word) - 1:
+                self.flag = True
+                return
             
-            # 尝试四个方向
-            for di, dj in directions:
-                new_i, new_j = i + di, j + dj
-                # 检查新坐标是否在网格范围内
-                if 0 <= new_i < rows and 0 <= new_j < cols:
-                    # 如果新格子未被访问，则递归探索
-                    if not visited[new_i][new_j]:
-                        if backtrack(new_i, new_j, k + 1):
-                            return True
+            # 标记当前格子为已访问
+            visited[x][y] = True
             
-            # 回溯：撤销访问标记
-            visited[i][j] = False
-            return False
-        
-        # 遍历每个格子作为起点
-        for i in range(rows):
-            for j in range(cols):
-                if backtrack(i, j, 0):
+            # 向四个方向继续探索，探索下一个字符（i+1）
+            dfs(i + 1, x + 1, y)  # 向下
+            dfs(i + 1, x - 1, y)  # 向上
+            dfs(i + 1, x, y + 1)  # 向右
+            dfs(i + 1, x, y - 1)  # 向左
+            
+            # 回溯：取消当前格子的访问标记
+            visited[x][y] = False
+
+        # 遍历整个网格，寻找单词的第一个字符
+        for i in range(m):
+            for j in range(n):
+                # 从每个格子开始搜索
+                dfs(0, i, j)
+                # 如果已经找到单词，直接返回结果
+                if self.flag:
                     return True
-        return False
+        
+        # 遍历完所有起点都没找到，返回False
+        return self.flag
 ```
 
 ### 分割回文串
@@ -1866,7 +1816,7 @@ class Solution:
                 if p0 < p1:
                     nums[i], nums[p1] = nums[p1], nums[i]
                 
-                # 0和1的区域都向右扩展
+                # 0和1的区域都向右扩展。注意最后加p0p1
                 p0 += 1
                 p1 += 1
                 
