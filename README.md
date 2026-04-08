@@ -178,6 +178,98 @@ class Solution:
             stack.append(i)
         return sum
 ```
+### 移除元素
+![alt text](pic/移除元素.png)
+```
+from typing import List
+
+class Solution:
+    def removeElement(self, nums: List[int], val: int) -> int:
+        """
+        原地移除数组中所有值等于 val 的元素，返回新数组的长度
+        
+        核心思想：快慢指针
+        - 快指针 i：遍历整个数组，寻找不需要删除的元素
+        - 慢指针 j：指向下一个要存放有效元素的位置
+        
+        时间复杂度：O(n)
+        空间复杂度：O(1)
+        """
+        
+        j = 0  # 慢指针：指向下一个有效元素要存放的位置
+        
+        for i in range(len(nums)):  # 快指针：遍历数组
+            if nums[i] != val:      # 当前元素不是要删除的值
+                nums[j] = nums[i]   # 将它放到慢指针指向的位置
+                j += 1              # 慢指针后移，准备接收下一个有效元素
+        
+        return j  # j 就是新数组的长度（有效元素个数）
+```
+### 删除有序数组的重复项
+![alt text](pic/删除有序数组的重复项.png)
+```
+from typing import List
+
+class Solution:
+    def removeDuplicates(self, nums: List[int]) -> int:
+        """
+        原地删除有序数组中的重复元素，使每个元素只出现一次，返回新数组的长度
+        
+        前提条件：数组已排序（升序或降序）
+        
+        核心思想：快慢指针
+        - 慢指针 j：指向最后一个不重复元素的位置
+        - 快指针 i：遍历数组，寻找新的不重复元素
+        
+        时间复杂度：O(n)
+        空间复杂度：O(1)
+        """
+        
+        j = 0  # 慢指针：指向最后一个不重复元素的索引
+        
+        for i in range(len(nums)):  # 快指针：遍历整个数组
+            # 当遇到与当前不重复元素不同的值时
+            if nums[i] != nums[j]:
+                j += 1              # 慢指针先移动，指向下一个要存放的位置
+                nums[j] = nums[i]   # 将新元素放到慢指针位置
+        
+        return j + 1  # 不重复元素的个数 = 索引 + 1
+```
+
+### 删除有序数组的重复项2
+![alt text](pic/删除有序数组的重复项2.png)
+```
+from typing import List
+
+class Solution:
+    def removeDuplicates(self, nums: List[int]) -> int:
+        """
+        原地删除有序数组中的重复项，使每个元素最多出现两次，返回新数组的长度
+        
+        核心思想：双指针
+        - 慢指针 j：指向最后一个已保留元素的位置
+        - 快指针 i：遍历数组
+        - 比较 nums[i] 与 nums[j-1]（往前数第二个保留元素）
+        
+        时间复杂度：O(n)
+        空间复杂度：O(1)
+        """
+        
+        # 长度小于等于2时，不需要处理
+        if len(nums) <= 2:
+            return len(nums)
+        
+        j = 2  # ✅ 慢指针从索引2开始，前两个元素一定保留
+        
+        for i in range(2, len(nums)):  # 快指针也从索引2开始
+            # 如果当前元素不等于往前数第二个保留元素
+            # 说明可以保留（不会超过两次）
+            if nums[i] != nums[j - 2]:  # 注意这里是 j-2，不是 j-1
+                nums[j] = nums[i]
+                j += 1
+        
+        return j
+```
 ## 滑动窗口
 ### 8. 无重复的最长字串
 ![alt text](./pic/无重复的最长子串.png)
@@ -1274,6 +1366,39 @@ class Solution:
         return ans
 ```
 
+### 加油站
+![alt text](pic/加油站.png)
+```
+from typing import List
+
+class Solution:
+    def canCompleteCircuit(self, gas: List[int], cost: List[int]) -> int:
+        """
+        判断能否绕环路行驶一周，如果可以则返回起点索引，否则返回 -1
+        
+        核心思想：
+        1. 如果总油量 < 总消耗，肯定无法完成，返回 -1
+        2. 否则，从 0 开始遍历，记录当前累计剩余油量
+        3. 当累计剩余油量达到最低点时，下一个点就是可能的起点
+        """
+        
+        sum_oil = 0      # 从起点到当前位置的累计剩余油量
+        start = 0        # 候选起点
+        min_oil = 0      # 历史最低油量（初始为0，表示起点前的状态）
+        
+        for i in range(len(gas)):
+            # 计算从 i 站到 i+1 站的净收益（加油量 - 消耗量）
+            sum_oil += (gas[i] - cost[i])
+            
+            # 如果当前累计油量低于历史最低点
+            if sum_oil < min_oil:
+                min_oil = sum_oil      # 更新最低点
+                start = i + 1          # 将起点设为下一个加油站
+        
+        # 如果总剩余油量 >= 0，说明能跑完，返回 start；否则返回 -1
+        return start if sum_oil >= 0 else -1
+```
+
 ## 动态规划
 
 ### 爬楼梯
@@ -1897,4 +2022,80 @@ class Solution:
             fast = nums[fast]
         
         return slow
+```
+
+## Attention
+```
+class MaskedMultiHeadAttention(nn.Module):
+    """
+    带掩码的多头自注意力机制（支持batch维度）
+    适用于Transformer解码器的因果自注意力（causal self-attention）
+    """
+    def __init__(self, d_model, num_heads):
+
+        super().__init__()
+        # 确保d_model可以被num_heads整除
+        assert d_model % num_heads == 0, "d_model必须能被num_heads整除"
+        
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads  # 每个头的维度
+        
+        # 定义四个线性变换层
+        self.W_q = nn.Linear(d_model, d_model)  # Query变换
+        self.W_k = nn.Linear(d_model, d_model)  # Key变换
+        self.W_v = nn.Linear(d_model, d_model)  # Value变换
+        self.W_o = nn.Linear(d_model, d_model)  # 输出变换
+        
+    def forward(self, X, mask=None):
+ 
+        batch_size, seq_len, d_model = X.shape
+        h = self.num_heads
+        d_k = self.d_k
+        
+        # 1. 线性变换并拆分为多头
+        # Q, K, V形状: (batch_size, seq_len, d_model)
+        Q = self.W_q(X)
+        K = self.W_k(X)
+        V = self.W_v(X)
+        
+        # 2. 重塑为多头格式: (batch_size, num_heads, seq_len, d_k)
+        Q = Q.view(batch_size, seq_len, h, d_k).transpose(1, 2)
+        K = K.view(batch_size, seq_len, h, d_k).transpose(1, 2)
+        V = V.view(batch_size, seq_len, h, d_k).transpose(1, 2)
+        
+        # 3. 计算注意力分数
+        # scores形状: (batch_size, num_heads, seq_len, seq_len)
+        scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)
+        
+        # 4. 应用掩码（默认使用因果掩码，防止看到未来信息）
+        if mask is None:
+            # 创建上三角掩码矩阵（对角线以上为-inf，对角线及以下为0）
+            # 形状: (seq_len, seq_len)
+            # diagonal：对角线上面一条，保证对角线不要inf
+            # torch.triu：保留上三角，下三角置零
+            # torch.full:获取一个填充矩阵
+            mask = torch.triu(torch.full((seq_len, seq_len), float('-inf')), diagonal=1)
+
+
+        scores = scores + mask
+        
+        # 5. 计算注意力权重（softmax归一化）
+        attn_weights = torch.softmax(scores, dim=-1)  # 在最后一个维度上做softmax
+        
+        # 6. 加权聚合value
+        # out形状: (batch_size, num_heads, seq_len, d_k)
+        out = torch.matmul(attn_weights, V)
+        
+        # 7. 合并多头
+        # 转置: (batch_size, num_heads, seq_len, d_k) -> (batch_size, seq_len, num_heads, d_k)
+        out = out.transpose(1, 2).contiguous()
+        # view之前要先连续化
+        # 重塑: (batch_size, seq_len, num_heads * d_k) = (batch_size, seq_len, d_model)
+        out = out.view(batch_size, seq_len, d_model)
+        
+        # 8. 最终线性变换
+        out = self.W_o(out)
+        
+        return out
 ```
